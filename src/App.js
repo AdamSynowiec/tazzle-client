@@ -1,8 +1,9 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './features/Login';
-import Logout from './features/Logout';
 import ProtectRoute from './routes/ProtectRoute';
+import Login from './features/Auth/Login';
+import Logout from './features/Auth/Logout';
+import Home from './features/Home/Home';
 
 const App = () => {
 
@@ -13,7 +14,9 @@ const App = () => {
 
         {/* Main page */}
         <Route path="/" element={
-          <ProtectRoute><>HOME</></ProtectRoute>
+          <ProtectRoute>
+            <Home />
+          </ProtectRoute>
         } />
 
         {/* Login page */}
