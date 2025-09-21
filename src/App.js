@@ -10,6 +10,11 @@ import Login from "./features/Auth/Login";
 import Logout from "./features/Auth/Logout";
 import Home from "./features/Home/Home";
 import { AuthProvider } from "./context/authContext";
+import Create from "./features/Create/Create";
+import Projects from "./features/Projects/Projects";
+import ProjectsAdd from "./features/Projects/ProjectsAdd";
+import ProjectBrowse from "./features/Projects/ProjectBrowse";
+import Board from "./features/Board/Board";
 
 const App = () => {
   return (
@@ -24,7 +29,13 @@ const App = () => {
                 <Home />
               </ProtectRoute>
             }
-          />
+          >
+            <Route path="board" element={<Board />} />
+            <Route path="create" element={<Create />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="projects/add" element={<ProjectsAdd />} />
+            <Route path="browse/:id" element={<ProjectBrowse />} />
+          </Route>
 
           {/* Login page */}
           <Route path="/login" element={<Login />} />

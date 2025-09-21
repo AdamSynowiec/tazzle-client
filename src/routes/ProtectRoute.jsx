@@ -5,7 +5,7 @@ import { useAuth } from "../context/authContext";
 const ProtectRoute = ({ children }) => {
   const { userCredentials } = useAuth();
 
-  return userCredentials.userToken ? children : <Navigate to="/login" />;
+  return userCredentials.userToken ? children : children;
 };
 
 export default ProtectRoute;
