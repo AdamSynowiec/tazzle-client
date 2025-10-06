@@ -8,21 +8,32 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [userCredentials, setUserCredentials] = useState({});
   const navigate = useNavigate();
+
   const login = async (email, password) => {
-    if (email === "admin" && password === "admin") {
-      setUserCredentials({
-        userId: 1,
-        userToken: "123123",
-      });
+    try {
+      const res = await fetch(
+        `http://localhost:3001/v1/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Błąd logowania");
+
+      setUserCredentials(data.data);
       navigate("/");
+    } catch (err) {
+      alert(err.message);
     }
   };
 
+  const logout = () => {
+    setUserCredentials({});
+    navigate("/login"); // Przekierowanie na stronę logowania
+  };
+
   useEffect(() => {
-    console.log("userCredentials", userCredentials);
   }, [userCredentials]);
 
-  const value = { userCredentials, setUserCredentials, login };
+  const value = { userCredentials, setUserCredentials, login, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

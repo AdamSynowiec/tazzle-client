@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTitle } from "../../hooks/useTitle";
+import { useAuth } from "../../context/authContext";
 
 const Projects = () => {
   const navigate = useNavigate();
@@ -8,11 +9,14 @@ const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { userCredentials } = useAuth();
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch("http://localhost:3001/v1/projects");
+        const response = await fetch(
+          `http://localhost:3001/v1/projects?userId=${userCredentials.user_id}`
+        );
         if (!response.ok) {
           throw new Error("Błąd pobierania projektów");
         }
@@ -32,7 +36,22 @@ const Projects = () => {
     };
 
     fetchProjects();
-  }, []);
+  }, [userCredentials.user_id]);
+
+  // Funkcja do kolorowania koła na podstawie pierwszej litery
+  const getColorByLetter = (letter) => {
+    const colors = [
+      "#F44336", "#E91E63", "#9C27B0", "#673AB7", "#3F51B5",
+      "#2196F3", "#03A9F4", "#00BCD4", "#009688", "#4CAF50",
+      "#8BC34A", "#CDDC39", "#3b6fffff", "#FFC107", "#FF9800",
+      "#FF5722", "#795548", "#9E9E9E", "#607D8B", "#FFCDD2",
+      "#F8BBD0", "#E1BEE7", "#D1C4E9", "#C5CAE9", "#BBDEFB", "#B2DFDB"
+    ];
+    if (!letter) return "#000";
+    const charCode = letter.toUpperCase().charCodeAt(0);
+    const index = (charCode - 65) % colors.length;
+    return colors[index];
+  };
 
   return (
     <div className="grid grid-cols-12 gap-6">
@@ -75,8 +94,17 @@ const Projects = () => {
               >
                 <div className="flex flex-row items-center gap-4">
                   {/* Ikona projektu jako koło z literą */}
-                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-poppins font-semibold">
-                    {project.project_key ? project.project_key.charAt(0).toUpperCase() : "P"}
+                  <div
+                    className="min-w-8 h-8 rounded-full flex items-center justify-center text-white font-poppins font-semibold"
+                    style={{
+                      backgroundColor: getColorByLetter(
+                        project.project_key?.charAt(0)
+                      ),
+                    }}
+                  >
+                    {project.project_key
+                      ? project.project_key.charAt(0).toUpperCase()
+                      : "P"}
                   </div>
 
                   <div>

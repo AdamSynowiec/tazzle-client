@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { useNavigate } from "react-router-dom";
 import { useTitle } from "../../hooks/useTitle";
+import { useAuth } from "../../context/authContext";
 
 const Create = () => {
   const navigate = useNavigate();
@@ -9,12 +10,14 @@ const Create = () => {
 
   const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
+  const [statuses, setStatuses] = useState([]);
+  const [priorities, setPriorities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     project: null,
-    issueType: null,
+    status: null,
     priority: null,
     summary: "",
     description: "",
@@ -22,31 +25,55 @@ const Create = () => {
     reporter: null,
   });
 
-  // Pobranie projektów
+  const { userCredentials } = useAuth();
+
+  // Fetch Projects
   const fetchProjects = async () => {
     try {
-      const response = await fetch("http://localhost:3001/v1/projects");
+      const response = await fetch(`http://localhost:3001/v1/projects?userId=${userCredentials.user_id}`);
       const result = await response.json();
       if (result.status === "success" && Array.isArray(result.data)) {
         setProjects(result.data);
-      } else {
-        throw new Error("Unexpected response format (projects)");
-      }
+      } else throw new Error("Invalid response for projects");
     } catch (err) {
       setError(err.message);
     }
   };
 
-  // Pobranie użytkowników
+  // Fetch Users
   const fetchUsers = async () => {
     try {
       const response = await fetch("http://localhost:3001/v1/users");
       const result = await response.json();
       if (result.status === "success" && Array.isArray(result.data)) {
         setUsers(result.data);
-      } else {
-        throw new Error("Unexpected response format (users)");
-      }
+      } else throw new Error("Invalid response for users");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Fetch Statuses
+  const fetchStatuses = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/v1/ticket/statuses");
+      const result = await response.json();
+      if (result.status === "success" && Array.isArray(result.data)) {
+        setStatuses(result.data.map((s) => ({ value: s.status_id, label: s.status_name })));
+      } else throw new Error("Invalid response for statuses");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Fetch Priorities
+  const fetchPriorities = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/v1/ticket/priorities");
+      const result = await response.json();
+      if (result.status === "success" && Array.isArray(result.data)) {
+        setPriorities(result.data.map((p) => ({ value: p.priority_id, label: p.priority_name })));
+      } else throw new Error("Invalid response for priorities");
     } catch (err) {
       setError(err.message);
     }
@@ -55,55 +82,49 @@ const Create = () => {
   useEffect(() => {
     fetchProjects();
     fetchUsers();
+    fetchStatuses();
+    fetchPriorities();
   }, []);
-
-  const issueTypeOptions = [
-    { value: "zadanie", label: "Zadanie" },
-    { value: "blad", label: "Błąd w programie" },
-    { value: "story", label: "Story" },
-    { value: "epik", label: "Epik" },
-  ];
-
-  const prioTypeOptions = [
-    { value: "High", label: "High" },
-    { value: "Medium", label: "Medium" },
-    { value: "Low", label: "Low" },
-  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Walidacja wymaganych pól
-    if (!formData.project || !formData.issueType || !formData.priority || !formData.summary || !formData.description || !formData.assignee || !formData.reporter) {
+    // Walidacja
+    if (
+      !formData.project ||
+      !formData.status ||
+      !formData.priority ||
+      !formData.summary ||
+      !formData.description ||
+      !formData.assignee ||
+      !formData.reporter
+    ) {
       setError("Wszystkie pola oznaczone * są wymagane");
       return;
     }
 
     const ticketData = {
-      project: formData.project.value,
-      issueType: formData.issueType.value,
-      priority: formData.priority.value,
-      summary: formData.summary,
-      description: formData.description,
-      assignee: formData.assignee.value,
-      reporter: formData.reporter.value,
+      project_id: formData.project.value,
+      status_id: formData.status.value,
+      priority_id: formData.priority.value,
+      ticket_title: formData.summary,
+      ticket_description: formData.description,
+      assignee_id: formData.assignee.value,
+      created_by: formData.reporter.value,
     };
 
     try {
       setLoading(true);
       const response = await fetch("http://localhost:3001/v1/ticket", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(ticketData),
       });
-
       const result = await response.json();
       if (result.status === "success") {
-        navigate("/"); // Redirect po sukcesie
+        navigate("/"); // przekierowanie po sukcesie
       } else {
-        throw new Error(result.message || "Wystąpił błąd");
+        throw new Error(result.message || "Błąd przy tworzeniu ticketu");
       }
     } catch (err) {
       setError(err.message);
@@ -114,7 +135,6 @@ const Create = () => {
 
   return (
     <div className="grid grid-cols-12 gap-6">
-      {/* Nagłówek */}
       <header className="col-span-12 flex items-center justify-between mb-6">
         <h2 className="font-poppins text-2xl font-normal">Utwórz zgłoszenie</h2>
         <button
@@ -122,7 +142,18 @@ const Create = () => {
           onClick={() => navigate("/")}
           aria-label="Powrót"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full"><path d="M6 18 17.94 6M18 18 6.06 6"></path></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-full h-full"
+          >
+            <path d="M6 18 17.94 6M18 18 6.06 6"></path>
+          </svg>
         </button>
       </header>
 
@@ -143,12 +174,12 @@ const Create = () => {
 
           <div>
             <label className="block font-poppins text-xs mb-1">
-              Typ zgłoszenia <span className="text-rose-600">*</span>
+              Status <span className="text-rose-600">*</span>
             </label>
             <Select
-              options={issueTypeOptions}
-              value={formData.issueType}
-              onChange={(selected) => setFormData({ ...formData, issueType: selected })}
+              options={statuses}
+              value={formData.status}
+              onChange={(selected) => setFormData({ ...formData, status: selected })}
             />
           </div>
 
@@ -157,7 +188,7 @@ const Create = () => {
               Priorytet <span className="text-rose-600">*</span>
             </label>
             <Select
-              options={prioTypeOptions}
+              options={priorities}
               value={formData.priority}
               onChange={(selected) => setFormData({ ...formData, priority: selected })}
             />

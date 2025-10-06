@@ -1,36 +1,33 @@
 import React, { useState, useEffect } from "react";
-import { FaUser } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useTitle } from "../../hooks/useTitle";
+import { useAuth } from "../../context/authContext";
 
 const ProjectsAdd = () => {
   const navigate = useNavigate();
-
+  const { userCredentials } = useAuth(); // aktualny użytkownik
   const [formData, setFormData] = useState({
     projectName: "",
     projectKey: "",
     projectDescription: "",
   });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Update title when project name changes
   useTitle("Tazzle - Dodaj projekt " + (formData?.projectName || ""));
 
-  // Function to generate project key from project name
+  // Generowanie klucza projektu na podstawie nazwy
   const generateProjectKey = (name) => {
     const words = name.split(" ");
-    const key = words
-      .map((word) => word[0])
-      .join("")
-      .slice(0, 5); // Limit to 5 characters if desired
-    return key;
+    const key = words.map((word) => word[0]).join("").slice(0, 5);
+    return key.toUpperCase();
   };
 
-  // Automatically generate the project key based on project name
   useEffect(() => {
     if (formData.projectName) {
       setFormData((prev) => ({
         ...prev,
-        projectKey: generateProjectKey(formData.projectName).toUpperCase(),
+        projectKey: generateProjectKey(formData.projectName),
       }));
     }
   }, [formData.projectName]);
@@ -39,29 +36,42 @@ const ProjectsAdd = () => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
-  const handleSelectChange = (selectedOption) => {
-    setFormData({ ...formData, reporter: selectedOption.value });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const response = await fetch("http://localhost:3001/v1/projects", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ProjectKey: formData.projectKey,
-        ProjectName: formData.projectName,
-        description: formData.projectDescription,
-      }),
-    });
+    if (!formData.projectName || !formData.projectKey || !formData.projectDescription) {
+      setError("Wszystkie pola oznaczone * są wymagane");
+      return;
+    }
 
-    if (response.ok) {
-      //navigate("/");
-    } else {
-      console.error("Błąd podczas tworzenia projektu");
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("http://localhost:3001/v1/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_key: formData.projectKey,
+          project_name: formData.projectName,
+          project_description: formData.projectDescription,
+          project_created_by: userCredentials?.user_id,
+          owner_id:userCredentials?.user_id,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.status === "success") {
+        navigate("/projects"); // przekierowanie do listy projektów
+      } else {
+        setError(result.message || "Błąd podczas tworzenia projektu");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -71,12 +81,12 @@ const ProjectsAdd = () => {
         <div className="flex flex-col gap-4">
           <h2 className="font-poppins text-2xl font-normal">Tworzenie projektu</h2>
           <p className="text-xs max-w-xs font-poppins text-slate-700">
-            Dodaj szczegóły projektu i potwierdź szablon, aby w ciągu kilku sekund utworzyć nowy projekt. Edytuj szczegóły projektu w dowolnej chwili w ustawieniach projektu.
+            Dodaj szczegóły projektu i potwierdź, aby utworzyć nowy projekt. Edytuj szczegóły projektu w dowolnej chwili w ustawieniach projektu.
           </p>
         </div>
         <button
           className="w-8 h-8 hover:bg-slate-100 rounded-md cursor-pointer"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/projects")}
           aria-label="Powrót"
         >
           <svg
@@ -95,9 +105,7 @@ const ProjectsAdd = () => {
       </header>
 
       <section className="col-span-12">
-        <p className="font-poppins text-xs mb-6">
-          Pola wymagane są oznaczone gwiazdką<span className="text-rose-600"> *</span>
-        </p>
+        {error && <p className="text-red-500 mb-2">{error}</p>}
 
         <form className="grid md:grid-cols-1 gap-4" onSubmit={handleSubmit}>
           <div>
@@ -113,6 +121,7 @@ const ProjectsAdd = () => {
               onChange={handleChange}
             />
           </div>
+
           <div>
             <label htmlFor="projectKey" className="block font-poppins text-xs mb-1">
               Klucz <span className="text-rose-600">*</span>
@@ -145,15 +154,16 @@ const ProjectsAdd = () => {
             <button
               type="button"
               className="hover:bg-slate-50 p-2 rounded-md font-medium"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/projects")}
             >
               Anuluj
             </button>
             <button
               type="submit"
-              className="hover:bg-blue-600 p-2 rounded-md bg-blue-500 text-white font-medium"
+              className={`p-2 rounded-md text-white font-medium ${loading ? "bg-blue-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"}`}
+              disabled={loading}
             >
-              Utwórz
+              {loading ? "Tworzenie..." : "Utwórz"}
             </button>
           </div>
         </form>

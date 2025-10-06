@@ -1,11 +1,10 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/authContext";
+import Login from "../features/Auth/Login";
 
 const ProtectRoute = ({ children }) => {
   const { userCredentials } = useAuth();
-
-  return userCredentials.userToken ? children : children;
+  return userCredentials.user_id ? children : <Login />;
 };
 
 export default ProtectRoute;
